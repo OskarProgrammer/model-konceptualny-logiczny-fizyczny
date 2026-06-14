@@ -1,5 +1,5 @@
 =========================================
-Sprawozdanie: Projektowanie bazy danych
+Projektowanie bazy danych
 =========================================
 
 :Autorzy:
@@ -41,7 +41,7 @@ Głównym procesem jest realizacja transakcji zakupu.
 
 Aby zweryfikować kompletność przetwarzanych informacji, przygotowano "płaską" (nieznormalizowaną) reprezentację danych dla transakcji zakupu uwzględniającą nowe procesy.
 
-.. code-block:: csv
+.. code-block::
 
     Imie,Nazwisko,Email,Telefon,Miasto,Ulica,Kod_Pocztowy,Producent,Kraj_Producenta,Nazwa_Produktu,Kategoria,Kod_Rabatowy,Znizka,Cena_Aktualna,Data_Zamowienia,Status_Zamowienia,Firma_Kurierska,Numer_Listu,Status_Paczki,Metoda_Platnosci,Status_Platnosci,Ilosc_Zakupiona,Cena_Historyczna,Ocena_Produktu,Komentarz
     Piotr,Nowak,p.nowak@pwr.edu.pl,600700800,Wrocław,Wybrzeże Wyspiańskiego 27,50-370,Samsung,Korea Pd.,Monitor 4K,Elektronika,STUDENT20,20,1200.00,2023-11-20,Dostarczone,InPost,654321987,Doreczona,BLIK,Zakonczona,1,1200.00,5,"Świetny monitor, polecam!"
