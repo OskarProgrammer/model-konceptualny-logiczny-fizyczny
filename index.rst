@@ -19,8 +19,8 @@ Głównym procesem jest realizacja transakcji zakupu.
 * **Rejestracja:** Klient rejestruje się w systemie, podając dane osobowe oraz adresowe (więź integralności: unikalny adres e-mail). Zarejestrowany klient może składać zamówienia.
 * **Katalog produktów:** Produkty przypisane są do określonych kategorii oraz do konkretnych producentów (marek), co pozwala na precyzyjne filtrowanie oferty.
 * **Koszyk, Kody Rabatowe i Zamówienie:** Każde zamówienie ma swój cykl życia określony statusem (np. "Nowe", "Wysłane", "Dostarczone"). Podczas tworzenia zamówienia klient dodaje produkty do koszyka i może opcjonalnie zastosować kod rabatowy obniżający wartość transakcji. Ponieważ ceny produktów mogą ulegać zmianom w czasie, system podczas finalizacji transakcji trwale zapisuje cenę historyczną dla każdej kupowanej pozycji.
-* **Logistyka i Wysyłki:** Po zatwierdzeniu zamówienia generowana jest wysyłka. System oddzielnie śledzi parametry logistyczne, takie jak firma kurierska, numer listu przewozowego oraz status doręczenia paczki.
-* **Płatności:** Do każdego zamówienia przypisana jest transakcja płatnicza. System oddzielnie śledzi status płatności (np. "Oczekująca", "Zakończona", "Odrzucona") w zależności od wybranej metody (BLIK, Karta, Przelew).
+* **Logistyka i Wysyłki:** Po zatwierdzeniu zamówienia może zostać utworzona wysyłka. System oddzielnie śledzi parametry logistyczne, takie jak firma kurierska, numer listu przewozowego oraz status doręczenia paczki.
+* **Płatności:** Do zamówienia może zostać przypisana transakcja płatnicza. System oddzielnie śledzi status płatności (np. "Oczekująca", "Zakończona", "Odrzucona") w zależności od wybranej metody (BLIK, Karta, Przelew).
 * **Opinie:** Po zakończeniu procesu dostawy, klient może wystawić ocenę (w skali 1-5) i komentarz do zakupionych produktów, co pomaga budować rekomendacje w sklepie.
 
 **Wykaz gromadzonych danych:**
@@ -64,6 +64,7 @@ Zidentyfikowane encje
 * **Wysyłka** - proces logistyczny doręczenia paczki.
 * **Płatność** - proces autoryzacji i przekazania środków za zamówienie.
 * **Opinia** - recenzja konkretnego produktu z danego zamówienia.
+* **Pozycja zamówienia** - encja asocjacyjna opisująca konkretny produkt występujący w zamówieniu.
 
 Zdefiniowane atrybuty/własności
 -------------------------------
@@ -77,23 +78,24 @@ Zdefiniowane atrybuty/własności
 * **Dla encji Wysyłka:** ``Firma kurierska``, ``Numer listu przewozowego``, ``Status paczki``.
 * **Dla encji Płatność:** ``Metoda płatności``, ``Status płatności``.
 * **Dla encji Opinia:** ``Ocena``, ``Komentarz``.
+* **Dla encji Pozycja zamówienia:** ``Ilość``, ``Cena historyczna``.
 
 Opis związków
 -------------
 
-* **Klient – Zamówienie (1:N):** Klient może złożyć wiele zamówień. Każde zamówienie przypisane jest do jednego klienta.
-* **Producent – Produkt (1:N):** Producent wytwarza wiele produktów, produkt ma jednego producenta.
-* **Kategoria – Produkt (1:N):** Kategoria grupuje wiele produktów.
-* **Kod Rabatowy – Zamówienie (1:N):** Jeden kod promocyjny może zostać użyty w wielu różnych zamówieniach.
-* **Zamówienie – Wysyłka (1:1):** Do każdego zamówienia generowana jest jedna fizyczna przesyłka kurierska z unikalnym listem przewozowym.
+* **Klient – Zamówienie (1:N):** Klient może złożyć zero lub wiele zamówień. Każde zamówienie jest przypisane do dokładnie jednego klienta.
+* **Producent – Produkt (1:N):** Producent może wytwarzać zero lub wiele produktów. Każdy produkt ma dokładnie jednego producenta.
+* **Kategoria – Produkt (1:N):** Kategoria może grupować zero lub wiele produktów. Każdy produkt należy do dokładnie jednej kategorii.
+* **Kod Rabatowy – Zamówienie (1:N):** Jeden kod promocyjny może zostać użyty w wielu zamówieniach, natomiast zastosowanie kodu w zamówieniu jest opcjonalne.
+* **Zamówienie – Wysyłka (1:0..1):** Zamówienie może nie mieć jeszcze wysyłki albo może mieć najwyżej jedną wysyłkę. Każda wysyłka dotyczy dokładnie jednego zamówienia.
 * **Zamówienie – Produkt (M:N):** Jedno zamówienie obejmuje wiele produktów. Dany produkt występuje w wielu zamówieniach. (Związek rozwiązywany przez encję słabą *Pozycja zamówienia*).
-* **Zamówienie – Płatność (1:1 lub 1:N):** Do zamówienia przypisana jest transakcja płatnicza.
+* **Zamówienie – Płatność (1:0..1):** Zamówienie może nie mieć jeszcze płatności albo może mieć najwyżej jedną transakcję płatniczą. Każda płatność dotyczy dokładnie jednego zamówienia.
 * **Pozycja zamówienia – Opinia (1:0..1):** Konkretny zakupiony produkt w danym zamówieniu może, ale nie musi, zostać zrecenzowany przez klienta.
 
 Określenie związków niepoprawnych (pułapki połączeń)
 ----------------------------------------------------
 
-**Pułapka wiatraka (chasm trap):** Zidentyfikowano potencjalny błąd projektowy polegający na bezpośrednim połączeniu encji *Klient* z encją *Produkt* (np. relacja "Klient kupuje Produkt"). Wprowadzenie takiej relacji zamiast łączenia przez *Zamówienie* doprowadziłoby do utraty kontekstu transakcyjnego. Wiedzielibyśmy, że dany klient kupił określone produkty, ale niemożliwe byłoby ustalenie, w jakiej dacie odbył się zakup, jaki jest jego status i które produkty zostały kupione razem w ramach jednego koszyka. Podobna pułapka mogłaby wystąpić przy łączeniu encji *Klient* z *Opinią* bez uwzględnienia *Zamówienia* – utracilibyśmy dowód na to, w ramach jakiej konkretnej transakcji zakupowej dana ocena została wystawiona.
+Zidentyfikowano ryzyko utworzenia redundantnego połączenia encji *Klient* z encją *Produkt* (np. relacją „Klient kupuje Produkt”). Taki związek dublowałby ścieżkę *Klient – Zamówienie – Pozycja zamówienia – Produkt* i mógłby prowadzić do niespójności danych lub błędnych połączeń w zapytaniach. Właściwa ścieżka zachowuje kontekst transakcyjny: datę i status zamówienia, cenę historyczną, liczbę sztuk oraz informację o produktach kupionych razem. Z tego samego powodu opinii nie połączono bezpośrednio z klientem, lecz z konkretną pozycją zamówienia.
 
 Identyfikacja encji słabych
 ---------------------------
@@ -143,8 +145,9 @@ Celem tego etapu jest przekształcenie "płaskich" danych do 3. Postaci Normalne
     1. Z tabeli *Zamówienia* wydzielamy powtarzające się dane klientów do tabeli **Klienci** (``ID_Klienta``).
     2. Z tabeli *Produkty* wydzielamy nazwę kategorii do tabeli **Kategorie** (``ID_Kategorii``) oraz dane o marce do tabeli **Producenci** (``ID_Producenta``).
     3. Z tabeli *Zamówienia* wydzielamy dane promocyjne do tabeli **Kody_Rabatowe** (``ID_Kodu``).
-    4. Z tabeli *Zamówienia* wydzielamy dane operatora płatności do tabeli **Platnosci** (``ID_Platnosci``) oraz dane o kurierze do tabeli **Wysylki** (``ID_Wysylki``).
-    5. Z tabeli *Pozycje_Zamowienia* wydzielamy atrybuty opcjonalne dotyczące recenzji do tabeli **Opinie** (``ID_Opinii``), połączonej kluczami obcymi z zamówieniem i produktem.
+    4. Z tabeli *Zamówienia* wydzielamy dane kodu rabatowego do tabeli **Kody_Rabatowe** (``ID_Kodu``).
+
+Po osiągnięciu 3NF zastosowano dodatkową dekompozycję funkcjonalną. Dane posiadające odrębny cykl życia lub występujące opcjonalnie przeniesiono do tabel **Platnosci**, **Wysylki** i **Opinie**. Dzięki temu brak płatności, wysyłki albo opinii nie wymaga przechowywania pustych zestawów atrybutów w tabelach podstawowych.
 
 4.2. Ostateczna struktura tabel (3NF)
 -------------------------------------
@@ -210,7 +213,17 @@ Wyodrębniono 10 w pełni znormalizowanych tabel.
     * ``ID_Produktu`` (FK -> Pozycje_Zamowienia)
     * ``Ocena``, ``Komentarz``
 
-4.3. Diagram ERD (Model Logiczny)
+4.3. Najważniejsze więzy integralności modelu logicznego
+---------------------------------------------------------
+
+* Klucz główny tabeli **Pozycje_Zamowienia** jest złożony z pól ``ID_Zamowienia`` i ``ID_Produktu``.
+* Para ``ID_Zamowienia`` i ``ID_Produktu`` w tabeli **Opinie** jest jednocześnie kluczem obcym do pozycji zamówienia oraz posiada ograniczenie ``UNIQUE``. Dzięki temu jedną pozycję można ocenić najwyżej raz.
+* Pola ``ID_Zamowienia`` w tabelach **Platnosci** i **Wysylki** są wymagane i unikalne, co realizuje związki 1:0..1.
+* Pola ``Email``, ``Kod_tekstowy`` oraz ``Numer_listu`` posiadają ograniczenia unikalności.
+* ``ID_Kodu`` w tabeli **Zamowienia** jest opcjonalne. Pozostałe klucze obce identyfikujące klienta, producenta, kategorię i pozycję zamówienia są wymagane.
+* Wartości ceny i stanu magazynowego nie mogą być ujemne, liczba sztuk musi być większa od zera, zniżka mieści się w zakresie 0–100, a ocena w zakresie 1–5.
+
+4.4. Diagram ERD (Model Logiczny)
 ---------------------------------
 
 .. figure:: schemat_erd.png
@@ -227,20 +240,20 @@ Różnice między modelami wynikają z dostępnych klas przechowywania (SQLite) 
 5.1. Model fizyczny dla środowiska SQLite
 -----------------------------------------
 
-Silnik SQLite używa ograniczonych klas (INTEGER, REAL, TEXT, BLOB). Daty przechowywane są jako TEXT, co ułatwia formatowanie, a finanse (Cena) jako REAL.
+Silnik SQLite używa dynamicznego systemu typów opartego na klasach przechowywania, między innymi INTEGER, REAL, TEXT i BLOB. W projekcie datę zamówienia zadeklarowano jako ``DATETIME``, natomiast wartości pieniężne są przechowywane jako ``REAL``.
 
 **Specyfikacja tabel (SQLite):**
 
-* **Klienci**: ``ID_Klienta`` : INTEGER (PK), ``Imie`` : TEXT, ``Nazwisko`` : TEXT, ``Email`` : TEXT, ``Telefon`` : TEXT, ``Miasto`` : TEXT, ``Ulica`` : TEXT, ``Kod_Pocztowy`` : TEXT
-* **Producenci**: ``ID_Producenta`` : INTEGER (PK), ``Nazwa_producenta`` : TEXT, ``Kraj_pochodzenia`` : TEXT
-* **Kategorie**: ``ID_Kategorii`` : INTEGER (PK), ``Nazwa_kategorii`` : TEXT
-* **Kody_Rabatowe**: ``ID_Kodu`` : INTEGER (PK), ``Kod_tekstowy`` : TEXT, ``Znizka_procentowa`` : INTEGER
-* **Produkty**: ``ID_Produktu`` : INTEGER (PK), ``ID_Kategorii`` : INTEGER (FK), ``ID_Producenta`` : INTEGER (FK), ``Nazwa`` : TEXT, ``Opis`` : TEXT, ``Cena_aktualna`` : REAL, ``Stan_magazynowy`` : INTEGER
-* **Zamowienia**: ``ID_Zamowienia`` : INTEGER (PK), ``ID_Klienta`` : INTEGER (FK), ``ID_Kodu`` : INTEGER (FK), ``Data_zamowienia`` : TEXT, ``Status_zamowienia`` : TEXT
-* **Wysylki**: ``ID_Wysylki`` : INTEGER (PK), ``ID_Zamowienia`` : INTEGER (FK), ``Firma_kurierska`` : TEXT, ``Numer_listu`` : TEXT, ``Status_paczki`` : TEXT
-* **Platnosci**: ``ID_Platnosci`` : INTEGER (PK), ``ID_Zamowienia`` : INTEGER (FK), ``Metoda_platnosci`` : TEXT, ``Status_platnosci`` : TEXT
+* **Klienci**: ``ID_Klienta`` : INTEGER (PK, AUTOINCREMENT), ``Imie`` : TEXT, ``Nazwisko`` : TEXT, ``Email`` : TEXT, ``Telefon`` : TEXT, ``Miasto`` : TEXT, ``Ulica`` : TEXT, ``Kod_Pocztowy`` : TEXT
+* **Producenci**: ``ID_Producenta`` : INTEGER (PK, AUTOINCREMENT), ``Nazwa_producenta`` : TEXT, ``Kraj_pochodzenia`` : TEXT
+* **Kategorie**: ``ID_Kategorii`` : INTEGER (PK, AUTOINCREMENT), ``Nazwa_kategorii`` : TEXT
+* **Kody_Rabatowe**: ``ID_Kodu`` : INTEGER (PK, AUTOINCREMENT), ``Kod_tekstowy`` : TEXT, ``Znizka_procentowa`` : INTEGER
+* **Produkty**: ``ID_Produktu`` : INTEGER (PK, AUTOINCREMENT), ``ID_Kategorii`` : INTEGER (FK), ``ID_Producenta`` : INTEGER (FK), ``Nazwa`` : TEXT, ``Opis`` : TEXT, ``Cena_aktualna`` : REAL, ``Stan_magazynowy`` : INTEGER
+* **Zamowienia**: ``ID_Zamowienia`` : INTEGER (PK, AUTOINCREMENT), ``ID_Klienta`` : INTEGER (FK), ``ID_Kodu`` : INTEGER (FK), ``Data_zamowienia`` : DATETIME, ``Status_zamowienia`` : TEXT
+* **Wysylki**: ``ID_Wysylki`` : INTEGER (PK, AUTOINCREMENT), ``ID_Zamowienia`` : INTEGER (FK), ``Firma_kurierska`` : TEXT, ``Numer_listu`` : TEXT, ``Status_paczki`` : TEXT
+* **Platnosci**: ``ID_Platnosci`` : INTEGER (PK, AUTOINCREMENT), ``ID_Zamowienia`` : INTEGER (FK), ``Metoda_platnosci`` : TEXT, ``Status_platnosci`` : TEXT
 * **Pozycje_Zamowienia**: ``ID_Zamowienia`` : INTEGER (PK, FK), ``ID_Produktu`` : INTEGER (PK, FK), ``Ilosc`` : INTEGER, ``Cena_historyczna`` : REAL
-* **Opinie**: ``ID_Opinii`` : INTEGER (PK), ``ID_Zamowienia`` : INTEGER (FK), ``ID_Produktu`` : INTEGER (FK), ``Ocena`` : INTEGER, ``Komentarz`` : TEXT
+* **Opinie**: ``ID_Opinii`` : INTEGER (PK, AUTOINCREMENT), ``ID_Zamowienia`` : INTEGER (FK), ``ID_Produktu`` : INTEGER (FK), ``Ocena`` : INTEGER, ``Komentarz`` : TEXT
 
 .. figure:: schemat_fizyczny_sqlite.png
    :align: center
@@ -251,23 +264,30 @@ Silnik SQLite używa ograniczonych klas (INTEGER, REAL, TEXT, BLOB). Daty przech
 5.2. Model fizyczny dla środowiska PostgreSQL
 ---------------------------------------------
 
-Zastosowano precyzyjne typy tekstowe ograniczające długość (VARCHAR), dedykowany typ znacznika czasu (TIMESTAMP) oraz specjalny typ finansowy (NUMERIC).
+Zastosowano typy tekstowe ograniczające długość (VARCHAR), dedykowany typ znacznika czasu (TIMESTAMP) oraz dokładny typ liczbowy NUMERIC dla wartości pieniężnych. Klucze sztuczne korzystają z typu SERIAL, który automatyzuje nadawanie kolejnych identyfikatorów.
 
 **Specyfikacja tabel (PostgreSQL):**
 
-* **Klienci**: ``ID_Klienta`` : INTEGER (PK), ``Imie`` : VARCHAR(50), ``Nazwisko`` : VARCHAR(50), ``Email`` : VARCHAR(255), ``Telefon`` : VARCHAR(15), ``Miasto`` : VARCHAR(100), ``Ulica`` : VARCHAR(150), ``Kod_Pocztowy`` : VARCHAR(10)
-* **Producenci**: ``ID_Producenta`` : INTEGER (PK), ``Nazwa_producenta`` : VARCHAR(100), ``Kraj_pochodzenia`` : VARCHAR(50)
-* **Kategorie**: ``ID_Kategorii`` : INTEGER (PK), ``Nazwa_kategorii`` : VARCHAR(50)
-* **Kody_Rabatowe**: ``ID_Kodu`` : INTEGER (PK), ``Kod_tekstowy`` : VARCHAR(20), ``Znizka_procentowa`` : SMALLINT
-* **Produkty**: ``ID_Produktu`` : INTEGER (PK), ``ID_Kategorii`` : INTEGER (FK), ``ID_Producenta`` : INTEGER (FK), ``Nazwa`` : VARCHAR(150), ``Opis`` : TEXT, ``Cena_aktualna`` : NUMERIC(10,2), ``Stan_magazynowy`` : INTEGER
-* **Zamowienia**: ``ID_Zamowienia`` : INTEGER (PK), ``ID_Klienta`` : INTEGER (FK), ``ID_Kodu`` : INTEGER (FK), ``Data_zamowienia`` : TIMESTAMP, ``Status_zamowienia`` : VARCHAR(30)
-* **Wysylki**: ``ID_Wysylki`` : INTEGER (PK), ``ID_Zamowienia`` : INTEGER (FK), ``Firma_kurierska`` : VARCHAR(100), ``Numer_listu`` : VARCHAR(100), ``Status_paczki`` : VARCHAR(50)
-* **Platnosci**: ``ID_Platnosci`` : INTEGER (PK), ``ID_Zamowienia`` : INTEGER (FK), ``Metoda_platnosci`` : VARCHAR(50), ``Status_platnosci`` : VARCHAR(30)
+* **Klienci**: ``ID_Klienta`` : SERIAL (PK), ``Imie`` : VARCHAR(50), ``Nazwisko`` : VARCHAR(50), ``Email`` : VARCHAR(255), ``Telefon`` : VARCHAR(15), ``Miasto`` : VARCHAR(100), ``Ulica`` : VARCHAR(150), ``Kod_Pocztowy`` : VARCHAR(10)
+* **Producenci**: ``ID_Producenta`` : SERIAL (PK), ``Nazwa_producenta`` : VARCHAR(100), ``Kraj_pochodzenia`` : VARCHAR(50)
+* **Kategorie**: ``ID_Kategorii`` : SERIAL (PK), ``Nazwa_kategorii`` : VARCHAR(50)
+* **Kody_Rabatowe**: ``ID_Kodu`` : SERIAL (PK), ``Kod_tekstowy`` : VARCHAR(20), ``Znizka_procentowa`` : SMALLINT
+* **Produkty**: ``ID_Produktu`` : SERIAL (PK), ``ID_Kategorii`` : INTEGER (FK), ``ID_Producenta`` : INTEGER (FK), ``Nazwa`` : VARCHAR(150), ``Opis`` : TEXT, ``Cena_aktualna`` : NUMERIC(10,2), ``Stan_magazynowy`` : INTEGER
+* **Zamowienia**: ``ID_Zamowienia`` : SERIAL (PK), ``ID_Klienta`` : INTEGER (FK), ``ID_Kodu`` : INTEGER (FK), ``Data_zamowienia`` : TIMESTAMP, ``Status_zamowienia`` : VARCHAR(30)
+* **Wysylki**: ``ID_Wysylki`` : SERIAL (PK), ``ID_Zamowienia`` : INTEGER (FK), ``Firma_kurierska`` : VARCHAR(100), ``Numer_listu`` : VARCHAR(100), ``Status_paczki`` : VARCHAR(50)
+* **Platnosci**: ``ID_Platnosci`` : SERIAL (PK), ``ID_Zamowienia`` : INTEGER (FK), ``Metoda_platnosci`` : VARCHAR(50), ``Status_platnosci`` : VARCHAR(30)
 * **Pozycje_Zamowienia**: ``ID_Zamowienia`` : INTEGER (PK, FK), ``ID_Produktu`` : INTEGER (PK, FK), ``Ilosc`` : INTEGER, ``Cena_historyczna`` : NUMERIC(10,2)
-* **Opinie**: ``ID_Opinii`` : INTEGER (PK), ``ID_Zamowienia`` : INTEGER (FK), ``ID_Produktu`` : INTEGER (FK), ``Ocena`` : SMALLINT, ``Komentarz`` : TEXT
+* **Opinie**: ``ID_Opinii`` : SERIAL (PK), ``ID_Zamowienia`` : INTEGER (FK), ``ID_Produktu`` : INTEGER (FK), ``Ocena`` : SMALLINT, ``Komentarz`` : TEXT
 
 .. figure:: schemat_fizyczny_postgres.png
    :align: center
    :alt: Model fizyczny ERD dla PostgreSQL
 
    Rysunek 4: Fizyczny schemat bazy danych opracowany dla silnika PostgreSQL.
+
+5.3. Ograniczenia i indeksy modelu fizycznego
+---------------------------------------------
+
+W obu wariantach zastosowano te same reguły integralności: klucze główne i obce, ograniczenia ``NOT NULL``, ``UNIQUE`` i ``CHECK`` oraz odpowiednie działania referencyjne. Usunięcie zamówienia powoduje usunięcie jego pozycji, płatności, wysyłki i opinii (``ON DELETE CASCADE``). Usunięcie używanego kodu rabatowego ustawia ``ID_Kodu`` na ``NULL``, natomiast usunięcie kategorii lub producenta używanego przez produkt jest blokowane (``ON DELETE RESTRICT``).
+
+Dodatkowe indeksy utworzono dla kluczy obcych najczęściej wykorzystywanych podczas łączenia tabel: kategorii i producenta produktu, klienta zamówienia oraz produktu w pozycji zamówienia. Ograniczenia ``UNIQUE`` dla płatności i wysyłki tworzą również indeksy zapewniające szybkie wyszukiwanie według identyfikatora zamówienia.

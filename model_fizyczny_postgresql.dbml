@@ -1,0 +1,116 @@
+Project sklep_internetowy_postgresql {
+  database_type: 'PostgreSQL'
+  Note: 'Fizyczny model bazy danych sklepu internetowego dla PostgreSQL.'
+}
+
+Table Klienci {
+  ID_Klienta serial [pk, not null, increment]
+  Imie varchar(50) [not null]
+  Nazwisko varchar(50) [not null]
+  Email varchar(255) [not null, unique]
+  Telefon varchar(15)
+  Miasto varchar(100)
+  Ulica varchar(150)
+  Kod_Pocztowy varchar(10)
+}
+
+Table Kategorie {
+  ID_Kategorii serial [pk, not null, increment]
+  Nazwa_kategorii varchar(50) [not null]
+}
+
+Table Producenci {
+  ID_Producenta serial [pk, not null, increment]
+  Nazwa_producenta varchar(100) [not null]
+  Kraj_pochodzenia varchar(50)
+}
+
+Table Kody_Rabatowe {
+  ID_Kodu serial [pk, not null, increment]
+  Kod_tekstowy varchar(20) [not null, unique]
+  Znizka_procentowa smallint [check: `Znizka_procentowa BETWEEN 0 AND 100`]
+}
+
+Table Produkty {
+  ID_Produktu serial [pk, not null, increment]
+  ID_Kategorii integer [not null]
+  ID_Producenta integer [not null]
+  Nazwa varchar(150) [not null]
+  Opis text
+  Cena_aktualna numeric(10,2) [not null, check: `Cena_aktualna >= 0`]
+  Stan_magazynowy integer [not null, default: 0, check: `Stan_magazynowy >= 0`]
+
+  indexes {
+    ID_Kategorii [name: 'idx_produkty_kategoria']
+    ID_Producenta [name: 'idx_produkty_producent']
+  }
+}
+
+Table Zamowienia {
+  ID_Zamowienia serial [pk, not null, increment]
+  ID_Klienta integer [not null]
+  ID_Kodu integer
+  Data_zamowienia timestamp [not null, default: `CURRENT_TIMESTAMP`]
+  Status_zamowienia varchar(30) [not null]
+
+  indexes {
+    ID_Klienta [name: 'idx_zamowienia_klient']
+  }
+}
+
+Table Platnosci {
+  ID_Platnosci serial [pk, not null, increment]
+  ID_Zamowienia integer [not null, unique]
+  Metoda_platnosci varchar(50) [not null]
+  Status_platnosci varchar(30) [not null]
+
+  indexes {
+    ID_Zamowienia [name: 'idx_platnosci_zamowienie']
+  }
+}
+
+Table Pozycje_Zamowienia {
+  ID_Zamowienia integer [not null]
+  ID_Produktu integer [not null]
+  Ilosc integer [not null, check: `Ilosc > 0`]
+  Cena_historyczna numeric(10,2) [not null, check: `Cena_historyczna >= 0`]
+
+  indexes {
+    (ID_Zamowienia, ID_Produktu) [pk]
+    ID_Produktu [name: 'idx_pozycje_produkt']
+  }
+}
+
+Table Wysylki {
+  ID_Wysylki serial [pk, not null, increment]
+  ID_Zamowienia integer [not null, unique]
+  Firma_kurierska varchar(100)
+  Numer_listu varchar(100) [unique]
+  Status_paczki varchar(50)
+
+  indexes {
+    ID_Zamowienia [name: 'idx_wysylki_zamowienie']
+  }
+}
+
+Table Opinie {
+  ID_Opinii serial [pk, not null, increment]
+  ID_Zamowienia integer [not null]
+  ID_Produktu integer [not null]
+  Ocena smallint [not null, check: `Ocena BETWEEN 1 AND 5`]
+  Komentarz text
+
+  indexes {
+    (ID_Zamowienia, ID_Produktu) [unique, name: 'uq_opinie_pozycja']
+  }
+}
+
+Ref: Produkty.ID_Kategorii > Kategorie.ID_Kategorii [delete: restrict]
+Ref: Produkty.ID_Producenta > Producenci.ID_Producenta [delete: restrict]
+Ref: Zamowienia.ID_Klienta > Klienci.ID_Klienta [delete: cascade]
+Ref: Zamowienia.ID_Kodu > Kody_Rabatowe.ID_Kodu [delete: set null]
+Ref: Zamowienia.ID_Zamowienia - Platnosci.ID_Zamowienia [delete: cascade]
+Ref: Pozycje_Zamowienia.ID_Zamowienia > Zamowienia.ID_Zamowienia [delete: cascade]
+Ref: Pozycje_Zamowienia.ID_Produktu > Produkty.ID_Produktu [delete: cascade]
+Ref: Zamowienia.ID_Zamowienia - Wysylki.ID_Zamowienia [delete: cascade]
+Ref: Pozycje_Zamowienia.(ID_Zamowienia, ID_Produktu) - Opinie.(ID_Zamowienia, ID_Produktu) [delete: cascade]

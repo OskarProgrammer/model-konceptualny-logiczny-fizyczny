@@ -1,0 +1,107 @@
+Project sklep_internetowy_model_logiczny {
+  Note: 'Logiczny model relacyjnej bazy danych sklepu internetowego, doprowadzony do 3NF.'
+}
+
+Table Klienci {
+  ID_Klienta integer [pk, not null]
+  Imie varchar(50) [not null]
+  Nazwisko varchar(50) [not null]
+  Email varchar(255) [not null, unique]
+  Telefon varchar(15)
+  Miasto varchar(100)
+  Ulica varchar(150)
+  Kod_Pocztowy varchar(10)
+}
+
+Table Kategorie {
+  ID_Kategorii integer [pk, not null]
+  Nazwa_kategorii varchar(50) [not null]
+}
+
+Table Producenci {
+  ID_Producenta integer [pk, not null]
+  Nazwa_producenta varchar(100) [not null]
+  Kraj_pochodzenia varchar(50)
+}
+
+Table Kody_Rabatowe {
+  ID_Kodu integer [pk, not null]
+  Kod_tekstowy varchar(20) [not null, unique]
+  Znizka_procentowa integer [check: `Znizka_procentowa BETWEEN 0 AND 100`]
+}
+
+Table Produkty {
+  ID_Produktu integer [pk, not null]
+  ID_Kategorii integer [not null]
+  ID_Producenta integer [not null]
+  Nazwa varchar(150) [not null]
+  Opis text
+  Cena_aktualna decimal(10,2) [not null, check: `Cena_aktualna >= 0`]
+  Stan_magazynowy integer [not null, default: 0, check: `Stan_magazynowy >= 0`]
+
+  indexes {
+    ID_Kategorii [name: 'idx_produkty_kategoria']
+    ID_Producenta [name: 'idx_produkty_producent']
+  }
+}
+
+Table Zamowienia {
+  ID_Zamowienia integer [pk, not null]
+  ID_Klienta integer [not null]
+  ID_Kodu integer [note: 'Kod rabatowy jest opcjonalny.']
+  Data_zamowienia datetime [not null]
+  Status_zamowienia varchar(30) [not null]
+
+  indexes {
+    ID_Klienta [name: 'idx_zamowienia_klient']
+  }
+}
+
+Table Platnosci {
+  ID_Platnosci integer [pk, not null]
+  ID_Zamowienia integer [not null, unique, note: 'Zamówienie może mieć najwyżej jedną płatność.']
+  Metoda_platnosci varchar(50) [not null]
+  Status_platnosci varchar(30) [not null]
+}
+
+Table Pozycje_Zamowienia {
+  ID_Zamowienia integer [not null]
+  ID_Produktu integer [not null]
+  Ilosc integer [not null, check: `Ilosc > 0`]
+  Cena_historyczna decimal(10,2) [not null, check: `Cena_historyczna >= 0`]
+
+  indexes {
+    (ID_Zamowienia, ID_Produktu) [pk]
+    ID_Produktu [name: 'idx_pozycje_produkt']
+  }
+}
+
+Table Wysylki {
+  ID_Wysylki integer [pk, not null]
+  ID_Zamowienia integer [not null, unique, note: 'Zamówienie może mieć najwyżej jedną wysyłkę.']
+  Firma_kurierska varchar(100)
+  Numer_listu varchar(100) [unique]
+  Status_paczki varchar(50)
+}
+
+Table Opinie {
+  ID_Opinii integer [pk, not null]
+  ID_Zamowienia integer [not null]
+  ID_Produktu integer [not null]
+  Ocena integer [not null, check: `Ocena BETWEEN 1 AND 5`]
+  Komentarz text
+
+  indexes {
+    (ID_Zamowienia, ID_Produktu) [unique, name: 'uq_opinie_pozycja']
+  }
+}
+
+Ref: Produkty.ID_Kategorii > Kategorie.ID_Kategorii [delete: restrict]
+Ref: Produkty.ID_Producenta > Producenci.ID_Producenta [delete: restrict]
+Ref: Zamowienia.ID_Klienta > Klienci.ID_Klienta [delete: cascade]
+Ref: Zamowienia.ID_Kodu > Kody_Rabatowe.ID_Kodu [delete: set null]
+Ref: Zamowienia.ID_Zamowienia - Platnosci.ID_Zamowienia [delete: cascade]
+Ref: Pozycje_Zamowienia.ID_Zamowienia > Zamowienia.ID_Zamowienia [delete: cascade]
+Ref: Pozycje_Zamowienia.ID_Produktu > Produkty.ID_Produktu [delete: cascade]
+Ref: Zamowienia.ID_Zamowienia - Wysylki.ID_Zamowienia [delete: cascade]
+Ref: Pozycje_Zamowienia.(ID_Zamowienia, ID_Produktu) - Opinie.(ID_Zamowienia, ID_Produktu) [delete: cascade]

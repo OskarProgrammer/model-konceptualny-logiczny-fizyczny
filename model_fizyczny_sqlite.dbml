@@ -1,0 +1,116 @@
+Project sklep_internetowy_sqlite {
+  database_type: 'SQLite'
+  Note: 'Fizyczny model bazy danych sklepu internetowego dla SQLite.'
+}
+
+Table Klienci {
+  ID_Klienta integer [pk, not null, increment, note: 'INTEGER PRIMARY KEY AUTOINCREMENT']
+  Imie text [not null]
+  Nazwisko text [not null]
+  Email text [not null, unique]
+  Telefon text
+  Miasto text
+  Ulica text
+  Kod_Pocztowy text
+}
+
+Table Kategorie {
+  ID_Kategorii integer [pk, not null, increment, note: 'INTEGER PRIMARY KEY AUTOINCREMENT']
+  Nazwa_kategorii text [not null]
+}
+
+Table Producenci {
+  ID_Producenta integer [pk, not null, increment, note: 'INTEGER PRIMARY KEY AUTOINCREMENT']
+  Nazwa_producenta text [not null]
+  Kraj_pochodzenia text
+}
+
+Table Kody_Rabatowe {
+  ID_Kodu integer [pk, not null, increment, note: 'INTEGER PRIMARY KEY AUTOINCREMENT']
+  Kod_tekstowy text [not null, unique]
+  Znizka_procentowa integer [check: `Znizka_procentowa BETWEEN 0 AND 100`]
+}
+
+Table Produkty {
+  ID_Produktu integer [pk, not null, increment, note: 'INTEGER PRIMARY KEY AUTOINCREMENT']
+  ID_Kategorii integer [not null]
+  ID_Producenta integer [not null]
+  Nazwa text [not null]
+  Opis text
+  Cena_aktualna real [not null, check: `Cena_aktualna >= 0`]
+  Stan_magazynowy integer [not null, default: 0, check: `Stan_magazynowy >= 0`]
+
+  indexes {
+    ID_Kategorii [name: 'idx_produkty_kategoria']
+    ID_Producenta [name: 'idx_produkty_producent']
+  }
+}
+
+Table Zamowienia {
+  ID_Zamowienia integer [pk, not null, increment, note: 'INTEGER PRIMARY KEY AUTOINCREMENT']
+  ID_Klienta integer [not null]
+  ID_Kodu integer
+  Data_zamowienia datetime [not null, default: `CURRENT_TIMESTAMP`]
+  Status_zamowienia text [not null]
+
+  indexes {
+    ID_Klienta [name: 'idx_zamowienia_klient']
+  }
+}
+
+Table Platnosci {
+  ID_Platnosci integer [pk, not null, increment, note: 'INTEGER PRIMARY KEY AUTOINCREMENT']
+  ID_Zamowienia integer [not null, unique]
+  Metoda_platnosci text [not null]
+  Status_platnosci text [not null]
+
+  indexes {
+    ID_Zamowienia [name: 'idx_platnosci_zamowienie']
+  }
+}
+
+Table Pozycje_Zamowienia {
+  ID_Zamowienia integer [not null]
+  ID_Produktu integer [not null]
+  Ilosc integer [not null, check: `Ilosc > 0`]
+  Cena_historyczna real [not null, check: `Cena_historyczna >= 0`]
+
+  indexes {
+    (ID_Zamowienia, ID_Produktu) [pk]
+    ID_Produktu [name: 'idx_pozycje_produkt']
+  }
+}
+
+Table Wysylki {
+  ID_Wysylki integer [pk, not null, increment, note: 'INTEGER PRIMARY KEY AUTOINCREMENT']
+  ID_Zamowienia integer [not null, unique]
+  Firma_kurierska text
+  Numer_listu text [unique]
+  Status_paczki text
+
+  indexes {
+    ID_Zamowienia [name: 'idx_wysylki_zamowienie']
+  }
+}
+
+Table Opinie {
+  ID_Opinii integer [pk, not null, increment, note: 'INTEGER PRIMARY KEY AUTOINCREMENT']
+  ID_Zamowienia integer [not null]
+  ID_Produktu integer [not null]
+  Ocena integer [not null, check: `Ocena BETWEEN 1 AND 5`]
+  Komentarz text
+
+  indexes {
+    (ID_Zamowienia, ID_Produktu) [unique, name: 'uq_opinie_pozycja']
+  }
+}
+
+Ref: Produkty.ID_Kategorii > Kategorie.ID_Kategorii [delete: restrict]
+Ref: Produkty.ID_Producenta > Producenci.ID_Producenta [delete: restrict]
+Ref: Zamowienia.ID_Klienta > Klienci.ID_Klienta [delete: cascade]
+Ref: Zamowienia.ID_Kodu > Kody_Rabatowe.ID_Kodu [delete: set null]
+Ref: Zamowienia.ID_Zamowienia - Platnosci.ID_Zamowienia [delete: cascade]
+Ref: Pozycje_Zamowienia.ID_Zamowienia > Zamowienia.ID_Zamowienia [delete: cascade]
+Ref: Pozycje_Zamowienia.ID_Produktu > Produkty.ID_Produktu [delete: cascade]
+Ref: Zamowienia.ID_Zamowienia - Wysylki.ID_Zamowienia [delete: cascade]
+Ref: Pozycje_Zamowienia.(ID_Zamowienia, ID_Produktu) - Opinie.(ID_Zamowienia, ID_Produktu) [delete: cascade]
