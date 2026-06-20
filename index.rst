@@ -7,7 +7,7 @@ Projektowanie bazy danych
     2. Kamil Lewandowski
     3. Adam Tarkowski
 
-1. Wybór zagadnienia, opis procesów i danych
+Wybór zagadnienia, opis procesów i danych
 ============================================
 
 **Wybrane zagadnienie:** System zarządzania sprzedażą w sklepie internetowym. Projekt obejmuje obsługę kartoteki klientów, asortymentu produktów z uwzględnieniem producentów, kategoryzacji towarów, obsługę kodów rabatowych oraz proces składania i obsługi zamówień, w tym płatności, zaawansowaną logistykę wysyłek i recenzje.
@@ -36,7 +36,7 @@ Głównym procesem jest realizacja transakcji zakupu.
 * **Dane szczegółowe transakcji:** Ilość zamawianych sztuk konkretnego produktu, Cena zakupu (historyczna).
 * **Dane opinii:** Ocena (1-5), Komentarz.
 
-2. Prototyp CSV
+Prototyp CSV
 ===============
 
 Aby zweryfikować kompletność przetwarzanych informacji, przygotowano "płaską" (nieznormalizowaną) reprezentację danych dla transakcji zakupu uwzględniającą nowe procesy. Zastosowano separator średnikowy, zgodny ze skryptami importującymi dane do PostgreSQL i SQLite. Wartość ``ID_Zamowienia`` jest powtarzana dla wszystkich produktów należących do tej samej transakcji.
@@ -47,7 +47,7 @@ Aby zweryfikować kompletność przetwarzanych informacji, przygotowano "płask�
     1;Piotr;Nowak;p.nowak@pwr.edu.pl;600700800;Wrocław;Wybrzeże Wyspiańskiego 27;50-370;Samsung;Korea Pd.;Monitor 4K;Elektronika;STUDENT20;20;1200.00;10;2023-11-20;Dostarczone;InPost;654321987;Doręczona;BLIK;Zakończona;1;1200.00;5;"Świetny monitor, polecam!"
     1;Piotr;Nowak;p.nowak@pwr.edu.pl;600700800;Wrocław;Wybrzeże Wyspiańskiego 27;50-370;Logitech;Szwajcaria;Kabel HDMI;Elektronika;STUDENT20;20;50.00;50;2023-11-20;Dostarczone;InPost;654321987;Doręczona;BLIK;Zakończona;2;45.00;4;"Dobry kabel, ale sztywny."
 
-3. Model Konceptualny (Pojęciowy)
+Model Konceptualny (Pojęciowy)
 =================================
 
 Na podstawie analizy procesów i zebranych danych opracowano model pojęciowy, identyfikując obiekty, ich cechy oraz powiązania.
@@ -113,14 +113,14 @@ Schemat w notacji Chena
    :align: center
    :alt: Diagram związków encji w notacji Chena
 
-   Rysunek 1: Model konceptualny bazy danych sklepu internetowego.
+   Model konceptualny bazy danych sklepu internetowego.
 
-4. Model logiczny i proces normalizacji
+Model logiczny i proces normalizacji
 =======================================
 
 Celem tego etapu jest przekształcenie "płaskich" danych do 3. Postaci Normalnej (3NF) w celu eliminacji anomalii i redundancji.
 
-4.1. Przebieg procesu normalizacji
+Przebieg procesu normalizacji
 ----------------------------------
 
 **Krok 1: Pierwsza Postać Normalna (1NF)**
@@ -149,7 +149,7 @@ Celem tego etapu jest przekształcenie "płaskich" danych do 3. Postaci Normalne
 
 Takie wydzielenie danych opcjonalnych sprawia, że brak płatności, wysyłki albo opinii nie wymaga przechowywania pustych zestawów atrybutów w tabelach podstawowych.
 
-4.2. Ostateczna struktura tabel (3NF)
+Ostateczna struktura tabel (3NF)
 -------------------------------------
 
 Wyodrębniono 10 tabel spełniających założenia 3NF przy przyjętych zależnościach funkcyjnych i regułach biznesowych.
@@ -213,7 +213,7 @@ Wyodrębniono 10 tabel spełniających założenia 3NF przy przyjętych zależno
     * ``ID_Produktu`` (FK -> Pozycje_Zamowienia)
     * ``Ocena``, ``Komentarz``
 
-4.3. Najważniejsze więzy integralności modelu logicznego
+Najważniejsze więzy integralności modelu logicznego
 ---------------------------------------------------------
 
 * Klucz główny tabeli **Pozycje_Zamowienia** jest złożony z pól ``ID_Zamowienia`` i ``ID_Produktu``.
@@ -225,21 +225,21 @@ Wyodrębniono 10 tabel spełniających założenia 3NF przy przyjętych zależno
 * Wartości ceny i stanu magazynowego nie mogą być ujemne, liczba sztuk musi być większa od zera, zniżka mieści się w zakresie 0–100, a ocena w zakresie 1–5.
 * Statusy zamówienia, płatności i przesyłki są ograniczone do zdefiniowanych słowników wartości.
 
-4.4. Diagram ERD (Model Logiczny)
+Diagram ERD (Model Logiczny)
 ---------------------------------
 
 .. figure:: schemat_erd.png
    :align: center
    :alt: Model logiczny ERD w notacji Barkera
 
-   Rysunek 2: Model logiczny (ERD) bazy danych w 3. Postaci Normalnej.
+   Model logiczny (ERD) bazy danych w 3. Postaci Normalnej.
 
-5. Model fizyczny bazy danych
+Model fizyczny bazy danych
 ================================
 
 Różnice między modelami wynikają z dostępnych klas przechowywania (SQLite) i zaawansowanych typów precyzyjnych (PostgreSQL).
 
-5.1. Model fizyczny dla środowiska SQLite
+Model fizyczny dla środowiska SQLite
 -----------------------------------------
 
 Silnik SQLite używa dynamicznego systemu typów opartego na klasach przechowywania, między innymi INTEGER, REAL, TEXT i BLOB. W projekcie datę zamówienia zadeklarowano jako ``DATETIME``, natomiast wartości pieniężne są przechowywane jako ``REAL``.
@@ -261,9 +261,9 @@ Silnik SQLite używa dynamicznego systemu typów opartego na klasach przechowywa
    :align: center
    :alt: Model fizyczny ERD dla SQLite
 
-   Rysunek 3: Fizyczny schemat bazy danych opracowany dla silnika SQLite.
+   Fizyczny schemat bazy danych opracowany dla silnika SQLite.
 
-5.2. Model fizyczny dla środowiska PostgreSQL
+Model fizyczny dla środowiska PostgreSQL
 ---------------------------------------------
 
 Zastosowano typy tekstowe ograniczające długość (VARCHAR), dedykowany typ znacznika czasu (TIMESTAMP) oraz dokładny typ liczbowy NUMERIC dla wartości pieniężnych. Klucze sztuczne korzystają z typu SERIAL, który automatyzuje nadawanie kolejnych identyfikatorów.
@@ -285,9 +285,9 @@ Zastosowano typy tekstowe ograniczające długość (VARCHAR), dedykowany typ zn
    :align: center
    :alt: Model fizyczny ERD dla PostgreSQL
 
-   Rysunek 4: Fizyczny schemat bazy danych opracowany dla silnika PostgreSQL.
+   Fizyczny schemat bazy danych opracowany dla silnika PostgreSQL.
 
-5.3. Ograniczenia i indeksy modelu fizycznego
+Ograniczenia i indeksy modelu fizycznego
 ---------------------------------------------
 
 W obu wariantach zastosowano te same reguły integralności: klucze główne i obce, ograniczenia ``NOT NULL``, ``UNIQUE`` i ``CHECK`` oraz odpowiednie działania referencyjne. Usunięcie zamówienia powoduje usunięcie jego pozycji, płatności, wysyłki i opinii (``ON DELETE CASCADE``). Usunięcie używanego kodu rabatowego ustawia ``ID_Kodu`` na ``NULL`` bez zmiany historycznej wartości rabatu. Usunięcie klienta posiadającego zamówienia oraz produktu występującego w historii sprzedaży jest blokowane (``ON DELETE RESTRICT``), podobnie jak usunięcie używanej kategorii lub producenta.
