@@ -16,19 +16,19 @@ Table Klienci {
 
 Table Kategorie {
   ID_Kategorii serial [pk, not null, increment]
-  Nazwa_kategorii varchar(50) [not null]
+  Nazwa_kategorii varchar(50) [not null, unique]
 }
 
 Table Producenci {
   ID_Producenta serial [pk, not null, increment]
-  Nazwa_producenta varchar(100) [not null]
+  Nazwa_producenta varchar(100) [not null, unique]
   Kraj_pochodzenia varchar(50)
 }
 
 Table Kody_Rabatowe {
   ID_Kodu serial [pk, not null, increment]
   Kod_tekstowy varchar(20) [not null, unique]
-  Znizka_procentowa smallint [check: `Znizka_procentowa BETWEEN 0 AND 100`]
+  Znizka_procentowa smallint [not null, check: `Znizka_procentowa BETWEEN 0 AND 100`]
 }
 
 Table Produkty {
@@ -41,6 +41,7 @@ Table Produkty {
   Stan_magazynowy integer [not null, default: 0, check: `Stan_magazynowy >= 0`]
 
   indexes {
+    (Nazwa, ID_Producenta) [unique, name: 'uq_produkty_nazwa_producent']
     ID_Kategorii [name: 'idx_produkty_kategoria']
     ID_Producenta [name: 'idx_produkty_producent']
   }
@@ -50,8 +51,9 @@ Table Zamowienia {
   ID_Zamowienia serial [pk, not null, increment]
   ID_Klienta integer [not null]
   ID_Kodu integer
+  Znizka_zastosowana smallint [not null, default: 0, check: `Znizka_zastosowana BETWEEN 0 AND 100`]
   Data_zamowienia timestamp [not null, default: `CURRENT_TIMESTAMP`]
-  Status_zamowienia varchar(30) [not null]
+  Status_zamowienia varchar(30) [not null, check: `Status_zamowienia IN ('Nowe', 'Opłacone', 'Wysłane', 'Dostarczone', 'Anulowane')`]
 
   indexes {
     ID_Klienta [name: 'idx_zamowienia_klient']
@@ -62,7 +64,7 @@ Table Platnosci {
   ID_Platnosci serial [pk, not null, increment]
   ID_Zamowienia integer [not null, unique]
   Metoda_platnosci varchar(50) [not null]
-  Status_platnosci varchar(30) [not null]
+  Status_platnosci varchar(30) [not null, check: `Status_platnosci IN ('Oczekująca', 'Zakończona', 'Odrzucona')`]
 
   indexes {
     ID_Zamowienia [name: 'idx_platnosci_zamowienie']
@@ -86,7 +88,7 @@ Table Wysylki {
   ID_Zamowienia integer [not null, unique]
   Firma_kurierska varchar(100)
   Numer_listu varchar(100) [unique]
-  Status_paczki varchar(50)
+  Status_paczki varchar(50) [check: `Status_paczki IS NULL OR Status_paczki IN ('Przygotowywana', 'Nadana', 'W transporcie', 'Doręczona', 'Zwrócona')`]
 
   indexes {
     ID_Zamowienia [name: 'idx_wysylki_zamowienie']
@@ -107,10 +109,10 @@ Table Opinie {
 
 Ref: Produkty.ID_Kategorii > Kategorie.ID_Kategorii [delete: restrict]
 Ref: Produkty.ID_Producenta > Producenci.ID_Producenta [delete: restrict]
-Ref: Zamowienia.ID_Klienta > Klienci.ID_Klienta [delete: cascade]
+Ref: Zamowienia.ID_Klienta > Klienci.ID_Klienta [delete: restrict]
 Ref: Zamowienia.ID_Kodu > Kody_Rabatowe.ID_Kodu [delete: set null]
 Ref: Zamowienia.ID_Zamowienia - Platnosci.ID_Zamowienia [delete: cascade]
 Ref: Pozycje_Zamowienia.ID_Zamowienia > Zamowienia.ID_Zamowienia [delete: cascade]
-Ref: Pozycje_Zamowienia.ID_Produktu > Produkty.ID_Produktu [delete: cascade]
+Ref: Pozycje_Zamowienia.ID_Produktu > Produkty.ID_Produktu [delete: restrict]
 Ref: Zamowienia.ID_Zamowienia - Wysylki.ID_Zamowienia [delete: cascade]
 Ref: Pozycje_Zamowienia.(ID_Zamowienia, ID_Produktu) - Opinie.(ID_Zamowienia, ID_Produktu) [delete: cascade]

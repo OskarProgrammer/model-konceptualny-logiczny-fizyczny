@@ -17,10 +17,10 @@ Projektowanie bazy danych
 Głównym procesem jest realizacja transakcji zakupu.
 
 * **Rejestracja:** Klient rejestruje się w systemie, podając dane osobowe oraz adresowe (więź integralności: unikalny adres e-mail). Zarejestrowany klient może składać zamówienia.
-* **Katalog produktów:** Produkty przypisane są do określonych kategorii oraz do konkretnych producentów (marek), co pozwala na precyzyjne filtrowanie oferty.
-* **Koszyk, Kody Rabatowe i Zamówienie:** Każde zamówienie ma swój cykl życia określony statusem (np. "Nowe", "Wysłane", "Dostarczone"). Podczas tworzenia zamówienia klient dodaje produkty do koszyka i może opcjonalnie zastosować kod rabatowy obniżający wartość transakcji. Ponieważ ceny produktów mogą ulegać zmianom w czasie, system podczas finalizacji transakcji trwale zapisuje cenę historyczną dla każdej kupowanej pozycji.
+* **Katalog produktów:** Produkty przypisane są do określonych kategorii oraz do konkretnych producentów (marek). Para nazwy produktu i producenta jednoznacznie identyfikuje produkt w katalogu.
+* **Koszyk, Kody Rabatowe i Zamówienie:** Każde zamówienie ma kontrolowany cykl życia określony jednym ze statusów: "Nowe", "Opłacone", "Wysłane", "Dostarczone" albo "Anulowane". Klient może opcjonalnie zastosować kod rabatowy. W zamówieniu zapisywana jest historyczna wartość zastosowanego rabatu, a w każdej pozycji cena historyczna produktu, dzięki czemu późniejsza zmiana cennika lub kodu nie zmienia wartości archiwalnej transakcji.
 * **Logistyka i Wysyłki:** Po zatwierdzeniu zamówienia może zostać utworzona wysyłka. System oddzielnie śledzi parametry logistyczne, takie jak firma kurierska, numer listu przewozowego oraz status doręczenia paczki.
-* **Płatności:** Do zamówienia może zostać przypisana transakcja płatnicza. System oddzielnie śledzi status płatności (np. "Oczekująca", "Zakończona", "Odrzucona") w zależności od wybranej metody (BLIK, Karta, Przelew).
+* **Płatności:** W przyjętym zakresie projektu zamówienie może mieć najwyżej jedną płatność. System śledzi jej status: "Oczekująca", "Zakończona" albo "Odrzucona", oraz wybraną metodę (BLIK, Karta, Przelew).
 * **Opinie:** Po zakończeniu procesu dostawy, klient może wystawić ocenę (w skali 1-5) i komentarz do zakupionych produktów, co pomaga budować rekomendacje w sklepie.
 
 **Wykaz gromadzonych danych:**
@@ -30,7 +30,7 @@ Głównym procesem jest realizacja transakcji zakupu.
 * **Dane producenta:** Nazwa producenta, Kraj pochodzenia.
 * **Dane kategorii:** Nazwa kategorii.
 * **Dane rabatowe:** Kod tekstowy rabatu, Zniżka procentowa.
-* **Dane zamówienia:** Data złożenia, Status zamówienia.
+* **Dane zamówienia:** Data złożenia, Status zamówienia, historyczna wartość zastosowanego rabatu.
 * **Dane wysyłki:** Firma kurierska, Numer listu przewozowego, Status paczki.
 * **Dane płatności:** Metoda płatności, Status płatności.
 * **Dane szczegółowe transakcji:** Ilość zamawianych sztuk konkretnego produktu, Cena zakupu (historyczna).
@@ -145,14 +145,14 @@ Celem tego etapu jest przekształcenie "płaskich" danych do 3. Postaci Normalne
     1. Z tabeli *Zamówienia* wydzielamy powtarzające się dane klientów do tabeli **Klienci** (``ID_Klienta``).
     2. Z tabeli *Produkty* wydzielamy nazwę kategorii do tabeli **Kategorie** (``ID_Kategorii``) oraz dane o marce do tabeli **Producenci** (``ID_Producenta``).
     3. Z tabeli *Zamówienia* wydzielamy dane promocyjne do tabeli **Kody_Rabatowe** (``ID_Kodu``).
-    4. Z tabeli *Zamówienia* wydzielamy dane kodu rabatowego do tabeli **Kody_Rabatowe** (``ID_Kodu``).
+    4. Dane opcjonalne o odrębnym cyklu życia wydzielamy do tabel **Platnosci**, **Wysylki** i **Opinie**. W zamówieniu pozostaje ``Znizka_zastosowana`` jako historyczny fakt transakcyjny, analogicznie do ceny historycznej w pozycji zamówienia.
 
-Po osiągnięciu 3NF zastosowano dodatkową dekompozycję funkcjonalną. Dane posiadające odrębny cykl życia lub występujące opcjonalnie przeniesiono do tabel **Platnosci**, **Wysylki** i **Opinie**. Dzięki temu brak płatności, wysyłki albo opinii nie wymaga przechowywania pustych zestawów atrybutów w tabelach podstawowych.
+Takie wydzielenie danych opcjonalnych sprawia, że brak płatności, wysyłki albo opinii nie wymaga przechowywania pustych zestawów atrybutów w tabelach podstawowych.
 
 4.2. Ostateczna struktura tabel (3NF)
 -------------------------------------
 
-Wyodrębniono 10 w pełni znormalizowanych tabel.
+Wyodrębniono 10 tabel spełniających założenia 3NF przy przyjętych zależnościach funkcyjnych i regułach biznesowych.
 
 * **Klienci**
 
@@ -186,7 +186,7 @@ Wyodrębniono 10 w pełni znormalizowanych tabel.
     * ``ID_Zamowienia`` (PK)
     * ``ID_Klienta`` (FK -> Klienci)
     * ``ID_Kodu`` (FK -> Kody_Rabatowe)
-    * ``Data_zamowienia``, ``Status_zamowienia``
+    * ``Znizka_zastosowana``, ``Data_zamowienia``, ``Status_zamowienia``
 
 * **Wysylki**
 
@@ -220,8 +220,10 @@ Wyodrębniono 10 w pełni znormalizowanych tabel.
 * Para ``ID_Zamowienia`` i ``ID_Produktu`` w tabeli **Opinie** jest jednocześnie kluczem obcym do pozycji zamówienia oraz posiada ograniczenie ``UNIQUE``. Dzięki temu jedną pozycję można ocenić najwyżej raz.
 * Pola ``ID_Zamowienia`` w tabelach **Platnosci** i **Wysylki** są wymagane i unikalne, co realizuje związki 1:0..1.
 * Pola ``Email``, ``Kod_tekstowy`` oraz ``Numer_listu`` posiadają ograniczenia unikalności.
+* Nazwy kategorii i producentów są unikalne, a produkt jest jednoznaczny przez parę ``Nazwa`` i ``ID_Producenta``.
 * ``ID_Kodu`` w tabeli **Zamowienia** jest opcjonalne. Pozostałe klucze obce identyfikujące klienta, producenta, kategorię i pozycję zamówienia są wymagane.
 * Wartości ceny i stanu magazynowego nie mogą być ujemne, liczba sztuk musi być większa od zera, zniżka mieści się w zakresie 0–100, a ocena w zakresie 1–5.
+* Statusy zamówienia, płatności i przesyłki są ograniczone do zdefiniowanych słowników wartości.
 
 4.4. Diagram ERD (Model Logiczny)
 ---------------------------------
@@ -245,11 +247,11 @@ Silnik SQLite używa dynamicznego systemu typów opartego na klasach przechowywa
 **Specyfikacja tabel (SQLite):**
 
 * **Klienci**: ``ID_Klienta`` : INTEGER (PK, AUTOINCREMENT), ``Imie`` : TEXT, ``Nazwisko`` : TEXT, ``Email`` : TEXT, ``Telefon`` : TEXT, ``Miasto`` : TEXT, ``Ulica`` : TEXT, ``Kod_Pocztowy`` : TEXT
-* **Producenci**: ``ID_Producenta`` : INTEGER (PK, AUTOINCREMENT), ``Nazwa_producenta`` : TEXT, ``Kraj_pochodzenia`` : TEXT
-* **Kategorie**: ``ID_Kategorii`` : INTEGER (PK, AUTOINCREMENT), ``Nazwa_kategorii`` : TEXT
+* **Producenci**: ``ID_Producenta`` : INTEGER (PK, AUTOINCREMENT), ``Nazwa_producenta`` : TEXT (UNIQUE), ``Kraj_pochodzenia`` : TEXT
+* **Kategorie**: ``ID_Kategorii`` : INTEGER (PK, AUTOINCREMENT), ``Nazwa_kategorii`` : TEXT (UNIQUE)
 * **Kody_Rabatowe**: ``ID_Kodu`` : INTEGER (PK, AUTOINCREMENT), ``Kod_tekstowy`` : TEXT, ``Znizka_procentowa`` : INTEGER
 * **Produkty**: ``ID_Produktu`` : INTEGER (PK, AUTOINCREMENT), ``ID_Kategorii`` : INTEGER (FK), ``ID_Producenta`` : INTEGER (FK), ``Nazwa`` : TEXT, ``Opis`` : TEXT, ``Cena_aktualna`` : REAL, ``Stan_magazynowy`` : INTEGER
-* **Zamowienia**: ``ID_Zamowienia`` : INTEGER (PK, AUTOINCREMENT), ``ID_Klienta`` : INTEGER (FK), ``ID_Kodu`` : INTEGER (FK), ``Data_zamowienia`` : DATETIME, ``Status_zamowienia`` : TEXT
+* **Zamowienia**: ``ID_Zamowienia`` : INTEGER (PK, AUTOINCREMENT), ``ID_Klienta`` : INTEGER (FK), ``ID_Kodu`` : INTEGER (FK), ``Znizka_zastosowana`` : INTEGER, ``Data_zamowienia`` : DATETIME, ``Status_zamowienia`` : TEXT
 * **Wysylki**: ``ID_Wysylki`` : INTEGER (PK, AUTOINCREMENT), ``ID_Zamowienia`` : INTEGER (FK), ``Firma_kurierska`` : TEXT, ``Numer_listu`` : TEXT, ``Status_paczki`` : TEXT
 * **Platnosci**: ``ID_Platnosci`` : INTEGER (PK, AUTOINCREMENT), ``ID_Zamowienia`` : INTEGER (FK), ``Metoda_platnosci`` : TEXT, ``Status_platnosci`` : TEXT
 * **Pozycje_Zamowienia**: ``ID_Zamowienia`` : INTEGER (PK, FK), ``ID_Produktu`` : INTEGER (PK, FK), ``Ilosc`` : INTEGER, ``Cena_historyczna`` : REAL
@@ -269,11 +271,11 @@ Zastosowano typy tekstowe ograniczające długość (VARCHAR), dedykowany typ zn
 **Specyfikacja tabel (PostgreSQL):**
 
 * **Klienci**: ``ID_Klienta`` : SERIAL (PK), ``Imie`` : VARCHAR(50), ``Nazwisko`` : VARCHAR(50), ``Email`` : VARCHAR(255), ``Telefon`` : VARCHAR(15), ``Miasto`` : VARCHAR(100), ``Ulica`` : VARCHAR(150), ``Kod_Pocztowy`` : VARCHAR(10)
-* **Producenci**: ``ID_Producenta`` : SERIAL (PK), ``Nazwa_producenta`` : VARCHAR(100), ``Kraj_pochodzenia`` : VARCHAR(50)
-* **Kategorie**: ``ID_Kategorii`` : SERIAL (PK), ``Nazwa_kategorii`` : VARCHAR(50)
+* **Producenci**: ``ID_Producenta`` : SERIAL (PK), ``Nazwa_producenta`` : VARCHAR(100) (UNIQUE), ``Kraj_pochodzenia`` : VARCHAR(50)
+* **Kategorie**: ``ID_Kategorii`` : SERIAL (PK), ``Nazwa_kategorii`` : VARCHAR(50) (UNIQUE)
 * **Kody_Rabatowe**: ``ID_Kodu`` : SERIAL (PK), ``Kod_tekstowy`` : VARCHAR(20), ``Znizka_procentowa`` : SMALLINT
 * **Produkty**: ``ID_Produktu`` : SERIAL (PK), ``ID_Kategorii`` : INTEGER (FK), ``ID_Producenta`` : INTEGER (FK), ``Nazwa`` : VARCHAR(150), ``Opis`` : TEXT, ``Cena_aktualna`` : NUMERIC(10,2), ``Stan_magazynowy`` : INTEGER
-* **Zamowienia**: ``ID_Zamowienia`` : SERIAL (PK), ``ID_Klienta`` : INTEGER (FK), ``ID_Kodu`` : INTEGER (FK), ``Data_zamowienia`` : TIMESTAMP, ``Status_zamowienia`` : VARCHAR(30)
+* **Zamowienia**: ``ID_Zamowienia`` : SERIAL (PK), ``ID_Klienta`` : INTEGER (FK), ``ID_Kodu`` : INTEGER (FK), ``Znizka_zastosowana`` : SMALLINT, ``Data_zamowienia`` : TIMESTAMP, ``Status_zamowienia`` : VARCHAR(30)
 * **Wysylki**: ``ID_Wysylki`` : SERIAL (PK), ``ID_Zamowienia`` : INTEGER (FK), ``Firma_kurierska`` : VARCHAR(100), ``Numer_listu`` : VARCHAR(100), ``Status_paczki`` : VARCHAR(50)
 * **Platnosci**: ``ID_Platnosci`` : SERIAL (PK), ``ID_Zamowienia`` : INTEGER (FK), ``Metoda_platnosci`` : VARCHAR(50), ``Status_platnosci`` : VARCHAR(30)
 * **Pozycje_Zamowienia**: ``ID_Zamowienia`` : INTEGER (PK, FK), ``ID_Produktu`` : INTEGER (PK, FK), ``Ilosc`` : INTEGER, ``Cena_historyczna`` : NUMERIC(10,2)
@@ -288,6 +290,6 @@ Zastosowano typy tekstowe ograniczające długość (VARCHAR), dedykowany typ zn
 5.3. Ograniczenia i indeksy modelu fizycznego
 ---------------------------------------------
 
-W obu wariantach zastosowano te same reguły integralności: klucze główne i obce, ograniczenia ``NOT NULL``, ``UNIQUE`` i ``CHECK`` oraz odpowiednie działania referencyjne. Usunięcie zamówienia powoduje usunięcie jego pozycji, płatności, wysyłki i opinii (``ON DELETE CASCADE``). Usunięcie używanego kodu rabatowego ustawia ``ID_Kodu`` na ``NULL``, natomiast usunięcie kategorii lub producenta używanego przez produkt jest blokowane (``ON DELETE RESTRICT``).
+W obu wariantach zastosowano te same reguły integralności: klucze główne i obce, ograniczenia ``NOT NULL``, ``UNIQUE`` i ``CHECK`` oraz odpowiednie działania referencyjne. Usunięcie zamówienia powoduje usunięcie jego pozycji, płatności, wysyłki i opinii (``ON DELETE CASCADE``). Usunięcie używanego kodu rabatowego ustawia ``ID_Kodu`` na ``NULL`` bez zmiany historycznej wartości rabatu. Usunięcie klienta posiadającego zamówienia oraz produktu występującego w historii sprzedaży jest blokowane (``ON DELETE RESTRICT``), podobnie jak usunięcie używanej kategorii lub producenta.
 
 Dodatkowe indeksy utworzono dla kluczy obcych najczęściej wykorzystywanych podczas łączenia tabel: kategorii i producenta produktu, klienta zamówienia oraz produktu w pozycji zamówienia. Ograniczenia ``UNIQUE`` dla płatności i wysyłki tworzą również indeksy zapewniające szybkie wyszukiwanie według identyfikatora zamówienia.
