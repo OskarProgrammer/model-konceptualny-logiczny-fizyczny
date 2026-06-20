@@ -65,10 +65,6 @@ Table Platnosci {
   ID_Zamowienia integer [not null, unique]
   Metoda_platnosci text [not null]
   Status_platnosci text [not null, check: `Status_platnosci IN ('Oczekująca', 'Zakończona', 'Odrzucona')`]
-
-  indexes {
-    ID_Zamowienia [name: 'idx_platnosci_zamowienie']
-  }
 }
 
 Table Pozycje_Zamowienia {
@@ -89,10 +85,6 @@ Table Wysylki {
   Firma_kurierska text
   Numer_listu text [unique]
   Status_paczki text [check: `Status_paczki IS NULL OR Status_paczki IN ('Przygotowywana', 'Nadana', 'W transporcie', 'Doręczona', 'Zwrócona')`]
-
-  indexes {
-    ID_Zamowienia [name: 'idx_wysylki_zamowienie']
-  }
 }
 
 Table Opinie {
